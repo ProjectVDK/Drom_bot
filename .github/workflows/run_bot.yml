@@ -1,0 +1,49 @@
+name: DromBot
+
+on:
+  schedule:
+    # Каждые 5 минут в окне 23:00–03:55 UTC (06:00–10:55 по местному времени UTC+7)
+    - cron: "*/5 23,0,1,2,3 * * *"
+  workflow_dispatch: {}  # позволяет запустить вручную кнопкой "Run workflow" на GitHub
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Install Playwright browsers
+        run: |
+          playwright install --with-deps chromium
+
+      - name: Restore credentials and sessions from secrets
+        env:
+          GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+          SESSION_KRASNOYARSK: ${{ secrets.SESSION_KRASNOYARSK }}
+          SESSION_IRKUTSK: ${{ secrets.SESSION_IRKUTSK }}
+          SESSION_KHABAROVSK: ${{ secrets.SESSION_KHABAROVSK }}
+          SESSION_BLAGOVESHCHENSK: ${{ secrets.SESSION_BLAGOVESHCHENSK }}
+          SESSION_NOVOSIBIRSK: ${{ secrets.SESSION_NOVOSIBIRSK }}
+          SESSION_NOVOKUZNETSK: ${{ secrets.SESSION_NOVOKUZNETSK }}
+          SESSION_KEMEROVO: ${{ secrets.SESSION_KEMEROVO }}
+          SESSION_TOMSK: ${{ secrets.SESSION_TOMSK }}
+          SESSION_CHITA: ${{ secrets.SESSION_CHITA }}
+          SESSION_ULAN_UDE: ${{ secrets.SESSION_ULAN_UDE }}
+          SESSION_YAKUTSK: ${{ secrets.SESSION_YAKUTSK }}
+          SESSION_VLADIVOSTOK: ${{ secrets.SESSION_VLADIVOSTOK }}
+        run: python restore_secrets.py
+
+      - name: Run bot
+        run: python run_bot.py
