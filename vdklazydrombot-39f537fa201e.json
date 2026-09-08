@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "vdklazydrombot",
+  "private_key_id": "39f537fa201ea191df3710e52f944cafec582a04",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQChODy3ZlLwmXwW\nCKfuiqXYR1l1r+hyW8K7IBJ8WaOYDF/J2qqdVvs7kSjqZzfgCYyOzzy8U3R1Xe3d\nGHG3NH/c5xtgpD2uuSlzy409njyf954xjTXG4VLhBvpxf7srGPbVZCmgSjxER24H\nujcGND5F84Sy9DW72BC/xIHWglQ6Rr8S0BsJmb/VbC7Exr82f87ZFxuTnSDHb5b+\npGu9zd9r1V5Gr281YRwbmaarMChSa8/wPDwhDo4uIV7tuYupMJHZQqxtpRzK5fIo\nR1iI2Gkbkt4RJrl57Z4DQsgI6OkZocnUI7G3DMocP3tfvRsFf7yH/EFu/5mZfChY\nsCeuHJClAgMBAAECggEAOTrt7srfmXJaxrWW64qDWfXmD219Dg993pCBj2wAs2p9\nHHpHw6fLcndSt3chsiGhqFZvwIi9mCZaWHijcX4s/514rgNPtDUdvnHdNyjza3Pq\nz7tJgkqdca1Y/S5zIlbv1IuEbVa88x4KNKsJemXUT1+lVSN06bRHKdQXpS7JuI+x\nOf6kN3M6VfSRSM4cvtMaAEUxiBBVaX1tYPwxig/4dbkDPgmURgtpaj6yj0EKlKNC\n4kcnhZWWDCWCTaJGCdoMMKntsd24Ifr58V2MurL++hJ+zdX6sWErKKNDNGqeLQ8D\n6Y+Z7s9DQ2PMUFY0c5VR9Zxi3Vc7/0OZ7LNxq3ELhwKBgQDV6VgOYB9QSTA3FKdT\n9zTgNqeYyMBr4q/NAUpWVM3f3PVTjgHHNk6T3h5aXQRwZbn+IiM6GOYV8zD/DPkl\n3QT1Rs8Mi7M0fZUM8RTBd+H378Ao9omQKPLjt2boL0DtkhOoAMMKvf/0a1J8V9SY\ndX8RVnTyObavYHxW7vWxevs5bwKBgQDA8NKG0LD09PnQpF8ojaiZZPAue7lAmdNR\nHk7ISV0bgYAPktUaDOK/jKt947DGGHsXak2QkXEBfuX7XeixJprZdxx221rE3gbm\nixdjL4jUlF8QPApljZzD3F+z53qhBURcxGautD2b0eotTmeKjyWWGCIeLu3SLd4m\nSF2zSgFFKwKBgQCb1eLQljY5xxfZCLLd+LoMncR7CcUk04A/WTFOs3lIHTCcLlgd\nSPL1xltWeW1CdNmKylPff0QfuYt4Q3s+mkWCapNsEFn9Y3+ybe8xAqUcew0Cyphs\n7WgFfRb7D3G9oS2wtt1gdgqBha4R5+p5Jx/rAZEw5dqw6RmsO2nCYlWjAQKBgAWP\nq3HJWCBnYz/5TOjdVGu/dhDQ7iEHjgi7h+fL/YwKaoeIYu4SSwLcaiEBzBmZoQqm\nvL+bAZfacYSSS1+3ziTQgxiF8BLWl3pTrgPk3dvKvwa3xFDzCP64PmXwGR/FCBho\nbNFCTrhMD6ToqqFayOmPnoQiNCanvcx6r4C4dFrrAoGAPIlQPvuF2luIbezp7nsQ\nYjoH07Qee/sc0PwSWS5u+FaGkKVdQNb5dowTsCgWZa0NFUnvylve7ankI9GTkLNw\n6TgOdQ68Ba8c1Hx0S9IkAYr9/SkeIa2Sp2JnGy6kQJNbmsWSUVZrnGMuh0q5UBiA\nnXkujiLFH50HTsgaLpKUTiU=\n-----END PRIVATE KEY-----\n",
+  "client_email": "vdk-lazy-drom-bot@vdklazydrombot.iam.gserviceaccount.com",
+  "client_id": "102740610577447330101",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/vdk-lazy-drom-bot%40vdklazydrombot.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
