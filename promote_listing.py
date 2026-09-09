@@ -151,7 +151,12 @@ def promote_batch(city: str, targets: list):
         context = browser.new_context(storage_state=session_path)
         page = context.new_page()
 
-        page.goto(MY_PAGE_URL)
+        try:
+            page.goto(MY_PAGE_URL, wait_until="domcontentloaded", timeout=45000)
+        except PlaywrightTimeoutError:
+            print("⚠️  Страница не загрузилась с первой попытки — пробую ещё раз...")
+            page.goto(MY_PAGE_URL, wait_until="domcontentloaded", timeout=45000)
+
         page.wait_for_timeout(1000)
         page.get_by_role("link", name="Объявления").click()
         try:
@@ -377,7 +382,7 @@ def promote(city: str, model: str, action: str):
         context = browser.new_context(storage_state=session_path)
         page = context.new_page()
 
-        page.goto(MY_PAGE_URL)
+        page.goto(MY_PAGE_URL, wait_until="domcontentloaded", timeout=45000)
         page.wait_for_timeout(1000)
         page.get_by_role("link", name="Объявления").click()
         try:
