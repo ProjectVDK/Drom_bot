@@ -83,7 +83,12 @@ def get_dashboard_info(city: str) -> dict:
         context = browser.new_context(storage_state=session_path)
         page = context.new_page()
 
-        page.goto(MY_PAGE_URL)
+        try:
+            page.goto(MY_PAGE_URL, wait_until="domcontentloaded", timeout=45000)
+        except PlaywrightTimeoutError:
+            print("⚠️  Страница не загрузилась с первой попытки — пробую ещё раз...")
+            page.goto(MY_PAGE_URL, wait_until="domcontentloaded", timeout=45000)
+
         page.wait_for_timeout(1500)
 
         data = scrape_dashboard(page)
