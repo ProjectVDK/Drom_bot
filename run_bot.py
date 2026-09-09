@@ -410,7 +410,18 @@ def run():
     exhausted = set()
     for city in scan_cities:
         print(f"\n--- Проверяю баланс и пакеты: {city} ---")
-        info = get_dashboard_info(city)
+        info = None
+        for attempt in range(1, 3 + 1):
+            try:
+                info = get_dashboard_info(city)
+                break
+            except Exception as e:
+                print(f"⚠️  Попытка {attempt}/3 сканирования баланса {city} не удалась: {e}")
+                if attempt < 3:
+                    time.sleep(5)
+        if info is None:
+            print(f"❌ Не удалось получить баланс/пакеты для {city} — пропускаю проверку исчерпанных пакетов.")
+            continue
         log_dashboard_info(city, info, log_sheet)
         exhausted |= get_exhausted_set(city, info)
 
@@ -425,17 +436,33 @@ def run():
             if target is not None:
                 targets_by_city.setdefault(city, []).append(target)
 
-    # ЭТАП 4: выполняем — один проход браузера и страниц на город
+    # ЭТАП 4: выполняем — один проход браузера и страниц на город.
+    # До MAX_CITY_ATTEMPTS полных попыток на город В ЭТОМ ЖЕ запуске — не полагаемся
+    # на то, что следующий тик планировщика (через 5 минут) сам всё исправит.
+    MAX_CITY_ATTEMPTS = 3
+
     for city, targets in targets_by_city.items():
         print(f"\n=== Город: {city} — целей: {len(targets)} ===")
         for t in targets:
             print(f"  • {t['model']} — {t['action_label']}")
-        try:
-            results = promote_batch(city, targets)
+
+        results = None
+        for attempt in range(1, MAX_CITY_ATTEMPTS + 1):
+            try:
+                results = promote_batch(city, targets)
+                break
+            except Exception as e:
+                print(f"⚠️  Попытка {attempt}/{MAX_CITY_ATTEMPTS} для города {city} не удалась: {e}")
+                if attempt < MAX_CITY_ATTEMPTS:
+                    print("   Пробую ещё раз...")
+                    time.sleep(5)
+
+        if results is not None:
             log_batch_results(city, results, log_sheet)
-        except Exception as e:
-            print(f"❌ Необработанная ошибка при обработке города {city}: {e}")
-            print("   Пропускаю этот город, продолжаю со следующим.")
+        else:
+            print(f"❌ Все {MAX_CITY_ATTEMPTS} попытки для города {city} не удались в этом запуске.")
+            for t in targets:
+                append_log(log_sheet, city, t["model"], "", t["action_label"], "Ошибка (все попытки неудачны)")
 
 
 if __name__ == "__main__":
