@@ -4,7 +4,18 @@ on:
   schedule:
     # Каждые 5 минут в окне 23:00–03:55 UTC (06:00–10:55 по местному времени UTC+7)
     - cron: "*/5 23,0,1,2,3 * * *"
-  workflow_dispatch: {}  # позволяет запустить вручную кнопкой "Run workflow" на GitHub
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Выполнить все сегодняшние правила, игнорируя точное время (--force)"
+        type: boolean
+        default: false
+
+# Не даёт двум запускам этого workflow выполняться одновременно.
+# Если предыдущий ещё не закончил — следующий встаёт в очередь, а не стартует параллельно.
+concurrency:
+  group: drombot-run
+  cancel-in-progress: false
 
 jobs:
   run-bot:
@@ -46,4 +57,4 @@ jobs:
         run: python restore_secrets.py
 
       - name: Run bot
-        run: python run_bot.py
+        run: python run_bot.py ${{ github.event.inputs.force == 'true' && '--force' || '' }}
