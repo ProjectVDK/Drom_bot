@@ -32,7 +32,10 @@ LOG_SHEET_NAME = "Журнал"
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
-WINDOW_MINUTES = 10  # допуск при сверке текущего времени с "Время запуска"
+EARLY_MINUTES = 10     # можно стартовать чуть раньше "Времени запуска"
+CATCHUP_MINUTES = 60   # правило остаётся "созревшим" ещё столько минут после времени запуска
+                       # (страховка от пропущенных/задержанных тиков cron в GitHub Actions;
+                       # повторов нет — их исключает проверка по Журналу)
 
 LOCK_FILE = "run_bot.lock"
 LOCK_MAX_AGE_SECONDS = 240  # если lock свежее этого — считаем, что другой запуск ещё работает
@@ -140,26 +143,13 @@ def parse_time(value: str):
     return int(hh), int(mm)
 
 
-def is_active(rule: dict) -> bool:
-    """Проверяет столбец «Активно» (чекбокс). Пустая ячейка или отсутствие
-    столбца — считаем активным (обратная совместимость со старыми правилами)."""
-    val = rule.get("Активно", "")
-    if val == "" or val is None:
-        return True
-    val_str = str(val).strip().upper()
-    return val_str not in ("FALSE", "ЛОЖЬ", "0", "НЕТ", "NO")
-
-
 def is_due(rule: dict, now: datetime, ignore_time: bool = False) -> bool:
     days_raw = str(rule.get("Дни (UTC)", "")).strip()
     days = [d.strip() for d in days_raw.split(",") if d.strip()]
     weekday_numbers = [WEEKDAY_MAP[d] for d in days if d in WEEKDAY_MAP]
 
-    if now.weekday() not in weekday_numbers:
-        return False
-
     if ignore_time:
-        return True
+        return now.weekday() in weekday_numbers
 
     time_raw = str(rule.get("Время запуска (UTC)", "")).strip()
     if not time_raw:
@@ -171,19 +161,43 @@ def is_due(rule: dict, now: datetime, ignore_time: bool = False) -> bool:
         print(f"⚠️  Не удалось разобрать время «{time_raw}» в правиле, пропускаю.")
         return False
 
-    scheduled = now.replace(hour=hh, minute=mm, second=0, microsecond=0)
-    diff = abs((now - scheduled).total_seconds()) / 60
-    return diff <= WINDOW_MINUTES
+    # Проверяем сегодняшнее и вчерашнее вхождение расписания: окно догона может
+    # пересекать полночь UTC (правило 23:30 должно сработать и в 00:10 следующих суток).
+    # День недели считается по дате, на которую запланировано правило.
+    for day_offset in (0, 1):
+        scheduled = (now - timedelta(days=day_offset)).replace(
+            hour=hh, minute=mm, second=0, microsecond=0)
+        if scheduled.weekday() not in weekday_numbers:
+            continue
+        delta = (now - scheduled).total_seconds() / 60
+        if -EARLY_MINUTES <= delta <= CATCHUP_MINUTES:
+            return True
+    return False
+
+
+def work_day(dt: datetime) -> str:
+    """«Рабочие сутки» бота: граница сдвинута на 12:00 UTC, чтобы окно 23:00–03:55 UTC
+    не разрезалось полуночью. Используется для проверки «уже сделано сегодня»."""
+    return (dt - timedelta(hours=12)).strftime("%Y-%m-%d")
+
+
+def row_work_day(row: dict) -> str:
+    """Рабочие сутки строки Журнала (по её 'Дата/время' в UTC); '' если не разобрать."""
+    raw = str(row.get("Дата/время", ""))[:16]
+    try:
+        dt = datetime.strptime(raw, "%Y-%m-%d %H:%M")
+    except ValueError:
+        return ""
+    return work_day(dt)
 
 
 def already_done_today(log_rows: list, city: str, group: str, model: str = None) -> bool:
     """Проверяет по Журналу: было ли сегодня успешное действие по этой группе+городу
     (если group пустая — проверяет конкретно по городу+модели)."""
-    today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today_str = work_day(datetime.now(timezone.utc))
 
     for row in log_rows:
-        row_date = str(row.get("Дата/время", ""))[:10]
-        if row_date != today_str:
+        if row_work_day(row) != today_str:
             continue
         if str(row.get("Город", "")).strip() != city:
             continue
@@ -338,7 +352,7 @@ def run():
     if force_mode:
         print("🔁 Режим --force: беру все правила сегодняшнего дня недели, игнорируя точное время запуска.")
 
-    due_rules = [r for r in rules if is_active(r) and is_due(r, now, ignore_time=force_mode)]
+    due_rules = [r for r in rules if is_due(r, now, ignore_time=force_mode)]
     if not due_rules:
         print("Подходящих по времени правил не найдено. Завершаю.")
         return
@@ -368,15 +382,13 @@ def run():
 
             group_rules = [
                 r for r in rules
-                if str(r.get("Группа", "")).strip() == group
-                and str(r.get("Город", "")).strip() == city
-                and is_active(r)
+                if str(r.get("Группа", "")).strip() == group and str(r.get("Город", "")).strip() == city
             ]
 
-            today_str = now.strftime("%Y-%m-%d")
+            today_str = work_day(now)
             done_today = any(
                 str(row.get("Город", "")).strip() == city
-                and str(row.get("Дата/время", ""))[:10] == today_str
+                and row_work_day(row) == today_str
                 and str(row.get("Результат", "")).strip() in ("Успешно", "Уже активно")
                 and any(str(row.get("Модель", "")).strip() in str(gr.get("Модель", "")).strip()
                         or str(gr.get("Модель", "")).strip() in str(row.get("Модель", "")).strip()
@@ -410,18 +422,7 @@ def run():
     exhausted = set()
     for city in scan_cities:
         print(f"\n--- Проверяю баланс и пакеты: {city} ---")
-        info = None
-        for attempt in range(1, 3 + 1):
-            try:
-                info = get_dashboard_info(city)
-                break
-            except Exception as e:
-                print(f"⚠️  Попытка {attempt}/3 сканирования баланса {city} не удалась: {e}")
-                if attempt < 3:
-                    time.sleep(5)
-        if info is None:
-            print(f"❌ Не удалось получить баланс/пакеты для {city} — пропускаю проверку исчерпанных пакетов.")
-            continue
+        info = get_dashboard_info(city)
         log_dashboard_info(city, info, log_sheet)
         exhausted |= get_exhausted_set(city, info)
 
@@ -436,33 +437,17 @@ def run():
             if target is not None:
                 targets_by_city.setdefault(city, []).append(target)
 
-    # ЭТАП 4: выполняем — один проход браузера и страниц на город.
-    # До MAX_CITY_ATTEMPTS полных попыток на город В ЭТОМ ЖЕ запуске — не полагаемся
-    # на то, что следующий тик планировщика (через 5 минут) сам всё исправит.
-    MAX_CITY_ATTEMPTS = 3
-
+    # ЭТАП 4: выполняем — один проход браузера и страниц на город
     for city, targets in targets_by_city.items():
         print(f"\n=== Город: {city} — целей: {len(targets)} ===")
         for t in targets:
             print(f"  • {t['model']} — {t['action_label']}")
-
-        results = None
-        for attempt in range(1, MAX_CITY_ATTEMPTS + 1):
-            try:
-                results = promote_batch(city, targets)
-                break
-            except Exception as e:
-                print(f"⚠️  Попытка {attempt}/{MAX_CITY_ATTEMPTS} для города {city} не удалась: {e}")
-                if attempt < MAX_CITY_ATTEMPTS:
-                    print("   Пробую ещё раз...")
-                    time.sleep(5)
-
-        if results is not None:
+        try:
+            results = promote_batch(city, targets)
             log_batch_results(city, results, log_sheet)
-        else:
-            print(f"❌ Все {MAX_CITY_ATTEMPTS} попытки для города {city} не удались в этом запуске.")
-            for t in targets:
-                append_log(log_sheet, city, t["model"], "", t["action_label"], "Ошибка (все попытки неудачны)")
+        except Exception as e:
+            print(f"❌ Необработанная ошибка при обработке города {city}: {e}")
+            print("   Пропускаю этот город, продолжаю со следующим.")
 
 
 if __name__ == "__main__":
